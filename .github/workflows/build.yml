@@ -1,47 +1,43 @@
-name: Build APK
+name: Build Android Project
+
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch:
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: "8.7" }
-      - name: Install NDK and CMake
-        run: sdkmanager "ndk;26.1.10909125" "cmake;3.22.1"
-      - name: Build debug APK
-        run: |
-          set -o pipefail
-          gradle assembleDebug --stacktrace 2>&1 | tee build.log
-      - name: Collect ALL errors in one place
-        if: failure()
-        run: |
-          {
-            echo "## Build errors"
-            echo '```'
-            grep -E "^e: |error:|\.kt:[0-9]+|FAILED|What went wrong" -A4 build.log | head -200 || true
-            echo '```'
-          } > errors.txt
-          cat errors.txt >> "$GITHUB_STEP_SUMMARY"
-          grep -E "^e: |error:" build.log | while read -r l; do echo "::error::$l"; done || true
-      - name: Upload logs and errors
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-errors-and-logs
-          path: |
-            build.log
-            errors.txt
-            app/build/reports
-          if-no-files-found: ignore
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: FarmTrade-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        accept-android-sdk-licenses: true
+        packages: 'platform-tools build-tools;34.0.0 platforms;android-34'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build --stacktrace > build.log || true
+
+    - name: Generate Build Summary
+      if: always()
+      run: |
+        echo "## Build errors" >> "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        if [ -f build.log ]; then
+          grep -E "^e: |error:|\.kt:[0-9]+|FAILED|What went wrong" -A4 build.log | head -200 || true
+        else
+          echo "build.log not found"
+        fi
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
