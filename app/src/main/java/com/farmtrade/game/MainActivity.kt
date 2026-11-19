@@ -4,6 +4,8 @@ import android.opengl.GLSurfaceView
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -12,18 +14,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -38,11 +44,99 @@ class MainActivity : ComponentActivity() {
         val g = Game(applicationContext); g.sfx = Sfx(this)::play; game = g
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaterialTheme { GameScreen(g) }
+                MaterialTheme {
+                    var isLoading by remember { mutableStateOf(true) }
+                    if (isLoading) {
+                        SplashScreen(onFinished = { isLoading = false })
+                    } else {
+                        GameScreen(g)
+                    }
+                }
             }
         }
     }
     override fun onPause() { super.onPause(); game?.save() }
+}
+
+@Composable
+fun SplashScreen(onFinished: () -> Unit) {
+    var startAnim by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (startAnim) 1f else 0f,
+        animationSpec = tween(durationMillis = 1800),
+        label = "loading"
+    )
+
+    LaunchedEffect(Unit) {
+        startAnim = true
+        delay(2000)
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF1B5E20), Color(0xFF388E3C), Color(0xFF689F38))
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            // شعار مرئي مرسوم من عناصر اللعبة
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color(0x33FFFFFF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PlantIcon(Plants.all[0], 54.dp)
+                    Spacer(Modifier.width(4.dp))
+                    CoinIcon(48.dp)
+                }
+            }
+
+            Text(
+                text = "Farm trading",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                letterSpacing = 1.sp
+            )
+
+            Text(
+                text = "ازرع • احصد • تاجر",
+                fontSize = 16.sp,
+                color = Color(0xFFDCEDC8)
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // شريط التحميل
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
+                color = Color(0xFFFFD54F),
+                trackColor = Color(0x44000000)
+            )
+
+            Text(
+                text = "جاري تجهيز المزرعة... ${(progress * 100).toInt()}%",
+                fontSize = 13.sp,
+                color = Color.White
+            )
+        }
+    }
 }
 
 @Composable
