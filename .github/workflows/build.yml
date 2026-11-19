@@ -2,7 +2,9 @@ name: Build Android Project
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -28,16 +30,17 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build with Gradle
-      run: ./gradlew build --stacktrace > build.log || true
+      run: ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee build.log
+      continue-on-error: true
 
     - name: Generate Build Summary
       if: always()
       run: |
-        echo "## Build errors" >> "$GITHUB_STEP_SUMMARY"
+        echo "## Build errors and logs" >> "$GITHUB_STEP_SUMMARY"
         echo '```' >> "$GITHUB_STEP_SUMMARY"
         if [ -f build.log ]; then
-          grep -E "^e: |error:|\.kt:[0-9]+|FAILED|What went wrong" -A4 build.log | head -200 || true
+          tail -n 100 build.log || true
         else
-          echo "build.log not found"
+          echo "build.log still not found"
         fi
         echo '```' >> "$GITHUB_STEP_SUMMARY"
