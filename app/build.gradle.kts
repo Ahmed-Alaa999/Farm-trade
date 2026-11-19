@@ -4,6 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// ينسخ الصورة من جذر المشروع ويحولها إلى أيقونة التطبيق
+val generateIcon by tasks.registering(Copy::class) {
+    from(rootProject.file("1795092400185.jpg"))
+    into(layout.buildDirectory.dir("generated/icon/res/drawable"))
+    rename { "ic_launcher.png" }
+}
+
 android {
     namespace = "com.farmtrade.game"
     compileSdk = 34
@@ -17,6 +24,8 @@ android {
         versionName = "1.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
+
+    sourceSets.getByName("main").res.srcDir(layout.buildDirectory.dir("generated/icon/res"))
 
     applicationVariants.all {
         outputs.all {
@@ -38,6 +47,8 @@ android {
         }
     }
 }
+
+tasks.named("preBuild") { dependsOn(generateIcon) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
