@@ -30,17 +30,4 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build with Gradle
-      run: ./gradlew compileDebugKotlin --stacktrace 2>&1 | tee build.log
-      continue-on-error: true
-
-    - name: Generate Build Summary
-      if: always()
-      run: |
-        echo "## Build errors and logs" >> "$GITHUB_STEP_SUMMARY"
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
-        if [ -f build.log ]; then
-          tail -n 100 build.log || true
-        else
-          echo "build.log still not found"
-        fi
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
+      run: ./gradlew assembleDebug --stacktrace
